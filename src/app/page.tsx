@@ -1,14 +1,24 @@
 import Footer from '@/components/Footer'
 import Header from '@/components/Header'
-import HomeContent from '@/components/HomeContent'
-
+import Section from '@/components/Section'
+import Navbar from '@/components/Navbar'
 
 export default function Home() {
   return (
-    <main>
+    <div>
+      {/* Header & Navbar */}
       <Header />
-      <HomeContent />
+      <Navbar />
+
+      <Section
+        image="https://images.ctfassets.net/hrltx12pl8hq/28ECAQiPJZ78hxatLTa7Ts/2f695d869736ae3b0de3e56ceaca3958/free-nature-images.jpg?fit=fill&w=1200&h=630"
+        category="แฟชั่น"
+        title="คอลเลคชันฤดูใบไม้ร่วง–ฤดูหนาว 2025/26"
+        buttonText="ดูรายละเอียดเพิ่มเติม"
+      />
+
+      {/* Footer */}
       <Footer />
-    </main>
+    </div>
   )
 }
