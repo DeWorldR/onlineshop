@@ -1,4 +1,3 @@
-// src/app/cart/page.tsx
 import Header from "@/components/layout/Header";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";

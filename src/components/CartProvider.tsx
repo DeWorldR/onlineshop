@@ -1,62 +1,83 @@
-// src/components/CartProvider.tsx
+// "use client";
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-type CartItem = {
+export type CartItem = {
   id: string;
   title: string;
   price: number;
-  qty: number;
-  image?: string | null;
+  quantity: number;
+  image?: string;
 };
 
-type CartContextValue = {
-  items: CartItem[];
-  addToCart: (item: Omit<CartItem, "qty">, qty?: number) => void;
-  removeFromCart: (id: string) => void;
-  clearCart: () => void;
-  total: number;
+type CartCtx = {
+  cart: CartItem[];
+  add: (item: CartItem) => void;
+  remove: (id: string) => void;
+  update: (id: string, quantity: number) => void;
+  clear: () => void;
+  totalItems: number;
+  totalAmount: number;
 };
 
-const CartContext = createContext<CartContextValue | undefined>(undefined);
+const CartContext = createContext<CartCtx | null>(null);
 
-export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
+const STORAGE_KEY = "cart_v1";
 
+export function CartProvider({ children }: { children: React.ReactNode }) {
+  const [cart, setCart] = useState<CartItem[]>([]);
+
+  // load from localStorage on client
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("cart_v1");
-      if (raw) setItems(JSON.parse(raw));
-    } catch {}
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) setCart(JSON.parse(raw));
+    } catch (e) {
+      console.error("cart load err", e);
+    }
   }, []);
 
+  // persist
   useEffect(() => {
     try {
-      localStorage.setItem("cart_v1", JSON.stringify(items));
-    } catch {}
-  }, [items]);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+      // notify other tabs
+      try {
+        const bc = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("cart_channel") : null;
+        if (bc) bc.postMessage({ type: "cart-update", cart });
+      } catch {}
+      // custom event for Header to update badge etc.
+      window.dispatchEvent(new CustomEvent("cart-changed", { detail: { count: cart.reduce((s, i) => s + i.quantity, 0) } }));
+    } catch (e) {
+      console.error("cart save err", e);
+    }
+  }, [cart]);
 
-  const addToCart = (item: Omit<CartItem, "qty">, qty = 1) => {
-    setItems((prev) => {
-      const found = prev.find((p) => p.id === item.id);
+  const add = (item: CartItem) => {
+    setCart((s) => {
+      const found = s.find((i) => i.id === item.id);
       if (found) {
-        return prev.map((p) => (p.id === item.id ? { ...p, qty: p.qty + qty } : p));
+        return s.map((i) => (i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i));
       }
-      return [...prev, { ...item, qty }];
+      return [...s, item];
     });
   };
 
-  const removeFromCart = (id: string) => setItems((prev) => prev.filter((p) => p.id !== id));
-  const clearCart = () => setItems([]);
-  const total = items.reduce((s, it) => s + it.price * it.qty, 0);
+  const remove = (id: string) => setCart((s) => s.filter((i) => i.id !== id));
+  const update = (id: string, quantity: number) =>
+    setCart((s) => s.map((i) => (i.id === id ? { ...i, quantity: Math.max(1, quantity) } : i)));
+  const clear = () => setCart([]);
+
+  const totalItems = cart.reduce((sum, i) => sum + i.quantity, 0);
+  const totalAmount = cart.reduce((sum, i) => sum + i.quantity * i.price, 0);
 
   return (
-    <CartContext.Provider value={{ items, addToCart, removeFromCart, clearCart, total }}>
+    <CartContext.Provider value={{ cart, add, remove, update, clear, totalItems, totalAmount }}>
       {children}
     </CartContext.Provider>
   );
-};
+}
 
 export function useCart() {
   const ctx = useContext(CartContext);
