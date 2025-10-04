@@ -1,9 +1,12 @@
 // Very Compact: ขนาดหัวข้อเล็กลงมาก เหมาะถ้ารู้สึกว่าเดิมยังใหญ่เกิน
+import Link from "next/link";
+
 interface SectionProps {
   image: string
   category: string
   title: string
   buttonText: string
+
 }
 
 export default function Section({ image, category, title, buttonText }: SectionProps) {
@@ -24,11 +27,15 @@ export default function Section({ image, category, title, buttonText }: SectionP
             <span className="block break-words whitespace-normal">{title}</span>
           </h2>
 
+        {/* แตมแก้ปุ่มตรงนี้ */}
           <div className="mt-5">
-            <button className="inline-block bg-white text-black font-semibold px-5 py-2 rounded shadow hover:shadow-lg transition text-sm">
+            <Link
+              href="/collection"
+              className="inline-block bg-white text-black font-semibold px-5 py-2 rounded shadow hover:shadow-lg transition text-sm">
               {buttonText}
-            </button>
+            </Link>
           </div>
+
         </div>
       </div>
 
