@@ -3,7 +3,8 @@
 
 import React, { useEffect } from "react";
 import { SessionProvider } from "next-auth/react";
-import { CartProvider } from "@/components/CartProvider"; // <-- ถูกต้อง
+// เปลี่ยนมา import จาก folder cart (barrel) — ปลอดภัยกว่าถ้าคุณมี src/components/cart/index.ts
+import { CartProvider } from "@/components/cart";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
