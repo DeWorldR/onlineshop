@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type NewProduct = {
   id: string;
   title: string;
   price: number;
-  image?: string | null; // data URL หรือ URL
+  images?: string[]; // array of data-urls or external urls
   description?: string;
   category?: string;
   createdAt?: string;
@@ -16,226 +16,259 @@ export default function AddProductModal({
   open,
   onClose,
   onAdd,
-  categories = ["แฟชั่น", "เครื่องประดับ", "นาฬิกา", "แว่นตา", "น้ำหอม"],
 }: {
   open: boolean;
   onClose: () => void;
   onAdd: (p: NewProduct) => void;
-  categories?: string[];
 }) {
   const [title, setTitle] = useState("");
-  const [price, setPrice] = useState<string | number>("1290");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageURL, setImageURL] = useState(""); // alternative URL input (optional)
+  const [price, setPrice] = useState<string>("");
+  const [category, setCategory] = useState("แฟชั่น");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState(categories[0] ?? "");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]); // dataURL or url
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
-  // เมื่อเปลี่ยนไฟล์ ให้แปลงเป็น data URL เพื่อ preview
+  // CONFIG
+  const MAX_FILES = 4; // สูงสุดรูปต่อสินค้า
+  const MAX_TOTAL_BYTES = 2.5 * 1024 * 1024; // ประมาณ 2.5 MB สำหรับรวมทุกภาพ (ปรับได้)
+  const MAX_WIDTH = 1200; // ย่อกว้างสูงสุด
+  const DEFAULT_QUALITY = 0.7; // jpeg quality 0..1
+
   useEffect(() => {
-    if (!imageFile) {
-      setImagePreview(null);
+    if (!open) clearForm();
+  }, [open]);
+
+  function clearForm() {
+    setTitle("");
+    setPrice("");
+    setCategory("แฟชั่น");
+    setDescription("");
+    setImages([]);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  // helper: convert File -> dataURL (compressed via canvas)
+  async function fileToCompressedDataUrl(file: File, maxWidth = MAX_WIDTH, quality = DEFAULT_QUALITY) {
+    // read as blob/url -> create Image element
+    const dataUrl = await new Promise<string>((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = () => res(String(reader.result));
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+
+    // create image
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const image = new Image();
+      image.onload = () => res(image);
+      image.onerror = rej;
+      image.src = dataUrl;
+    });
+
+    // scale keeping aspect ratio
+    const scale = Math.min(1, maxWidth / img.width);
+    const w = Math.round(img.width * scale);
+    const h = Math.round(img.height * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return dataUrl;
+    // draw and export as jpeg
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL("image/jpeg", quality);
+  }
+
+  // approximate bytes from base64 dataURL
+  function approxBytesFromDataUrl(dataUrl: string) {
+    // strip prefix "data:*/*;base64,"
+    const idx = dataUrl.indexOf("base64,");
+    const b64 = idx >= 0 ? dataUrl.slice(idx + 7) : dataUrl;
+    // approx bytes = (length * 3) / 4
+    return Math.ceil((b64.length * 3) / 4);
+  }
+
+  // handle picking files (compress & limit)
+  async function onFilesPicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // limit how many more images allowed
+    const allowedSlots = Math.max(0, MAX_FILES - images.length);
+    if (allowedSlots <= 0) {
+      alert(`คุณสามารถอัปโหลดได้สูงสุด ${MAX_FILES} รูปต่อสินค้า`);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setImagePreview(String(reader.result));
-    };
-    reader.readAsDataURL(imageFile);
-  }, [imageFile]);
 
-  // ถ้า modal ปิด ให้เคลียร์ฟอร์ม
-  useEffect(() => {
-    if (!open) {
-      setTitle("");
-      setPrice("1290");
-      setImageFile(null);
-      setImagePreview(null);
-      setImageURL("");
-      setDescription("");
-      setCategory(categories[0] ?? "");
-      setError(null);
-    }
-  }, [open, categories]);
+    const incoming = Array.from(files).slice(0, allowedSlots);
 
-  async function handleSubmit(e?: React.FormEvent) {
-    e?.preventDefault();
-    setError(null);
+    // check current total size estimate
+    let currentTotal = images.reduce((acc, src) => acc + approxBytesFromDataUrl(src), 0);
 
-    if (!title.trim()) {
-      setError("กรุณากรอกชื่อสินค้า");
-      return;
-    }
-    const numericPrice = Number(price);
-    if (Number.isNaN(numericPrice) || numericPrice < 0) {
-      setError("กรุณากรอกราคาเป็นตัวเลขที่ถูกต้อง");
-      return;
-    }
-    if (!category) {
-      setError("กรุณาเลือกหมวดหมู่");
-      return;
-    }
+    for (const file of incoming) {
+      try {
+        // compress file
+        let dataUrl = await fileToCompressedDataUrl(file, MAX_WIDTH, DEFAULT_QUALITY);
 
-    setSubmitting(true);
+        // if too large, try reducing quality progressively
+        let approx = approxBytesFromDataUrl(dataUrl);
+        let q = DEFAULT_QUALITY;
+        while (currentTotal + approx > MAX_TOTAL_BYTES && q > 0.25) {
+          q = q - 0.15; // reduce quality
+          dataUrl = await fileToCompressedDataUrl(file, MAX_WIDTH, q);
+          approx = approxBytesFromDataUrl(dataUrl);
+        }
 
-    try {
-      // ถ้ามี imageFile ให้แปลงเป็น dataURL (ถ้ายังไม่มี preview)
-      let finalImage: string | null = null;
-      if (imagePreview) {
-        finalImage = imagePreview;
-      } else if (imageURL) {
-        finalImage = imageURL;
-      } else {
-        finalImage = null;
+        // if still too big after compression, skip or warn
+        if (currentTotal + approx > MAX_TOTAL_BYTES) {
+          const proceed = confirm(
+            "รูปนี้จะทำให้พื้นที่เก็บข้อมูลเต็ม — ต้องการบันทึกโดยไม่รวมรูปนี้หรือไม่? (OK = ข้ามรูป, Cancel = ยกเลิกการอัปโหลด)"
+          );
+          if (!proceed) break;
+          continue; // skip this file
+        }
+
+        setImages((s) => [...s, dataUrl]);
+        currentTotal += approx;
+      } catch (err) {
+        console.error("Failed to read/compress file", err);
+        alert("อ่าน/บีบอัดไฟล์ไม่สำเร็จหนึ่งไฟล์ — ข้ามไฟล์นั้นไป");
       }
-
-      const newProduct: NewProduct = {
-        id: `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        title: title.trim(),
-        price: numericPrice,
-        image: finalImage,
-        description: description.trim() || undefined,
-        category,
-        createdAt: new Date().toISOString(),
-      };
-
-      // callback ให้ parent เก็บ (ProfilePage จะใส่เข้า localStorage)
-      onAdd(newProduct);
-
-      // ปิด modal
-      onClose();
-    } catch (err) {
-      console.error(err);
-      setError("เกิดข้อผิดพลาด กรุณาลองใหม่");
-    } finally {
-      setSubmitting(false);
     }
+
+    // reset file input so same file can be reselected later
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  // add image by URL (external)
+  function addUrlImage(url: string) {
+    if (!url) return;
+    // do a quick size check by head request is not possible here; just append
+    if (images.length >= MAX_FILES) {
+      alert(`จำกัด ${MAX_FILES} รูปต่อสินค้า`);
+      return;
+    }
+    setImages((s) => [...s, url]);
+  }
+
+  function removeImageAt(i: number) {
+    setImages((s) => s.filter((_, idx) => idx !== i));
+  }
+
+  function sanitizeNumberInput(v: string) {
+    // allow digits and dot
+    return v.replace(/[^0-9.]/g, "");
+  }
+
+  function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!title.trim()) return alert("กรุณาใส่ชื่อสินค้า");
+    const priceNum = parseFloat(price || "0");
+    const finalPrice = Number.isFinite(priceNum) ? priceNum : 0;
+
+    const p: NewProduct = {
+      id:
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      title: title.trim(),
+      price: finalPrice,
+      images: images,
+      description: description.trim(),
+      category,
+      createdAt: new Date().toISOString(),
+    };
+
+    console.log("NEW PRODUCT (to add):", { ...p, imagesCount: p.images?.length });
+    onAdd(p);
+    onClose();
+    clearForm();
   }
 
   if (!open) return null;
 
   return (
-    // portal จะดีกว่า แต่เรียบง่ายก็เรนเดอร์ตรงนี้ก็ได้
-    <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center px-4 py-8">
-      {/* backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={() => onClose()}
-        aria-hidden
-      />
+    <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center p-6">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
+      <form onSubmit={handleSubmit} className="relative z-10 w-full max-w-3xl bg-white rounded shadow-lg p-6">
+        <button type="button" onClick={onClose} className="absolute top-3 right-3 text-gray-600">✕</button>
+        <h3 className="text-lg font-semibold mb-4">ลงขายสินค้าใหม่</h3>
 
-      {/* modal */}
-      <div className="relative z-60 w-full max-w-2xl bg-white rounded shadow-lg overflow-hidden">
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <h3 className="text-lg font-semibold">ลงขายสินค้าใหม่</h3>
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-800"
-            >
-              ✕
-            </button>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium">ชื่อสินค้า</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className="w-full mt-1 border rounded px-3 py-2" placeholder="เช่น เสื้อเชิ้ตคลาสสิก" />
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2 md:col-span-1">
-              <label className="block text-sm font-medium mb-1">ชื่อสินค้า</label>
-              <input
-                className="w-full border rounded px-3 py-2"
-                placeholder="เช่น เสื้อเชิ้ตคลาสสิก"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-
-            <div className="col-span-2 md:col-span-1">
-              <label className="block text-sm font-medium mb-1">ราคา (บาท)</label>
-              <input
-                className="w-full border rounded px-3 py-2"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                inputMode="numeric"
-              />
-            </div>
-
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">หมวดหมู่</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full border rounded px-3 py-2"
-              >
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="col-span-2 md:col-span-1">
-              <label className="block text-sm font-medium mb-1">รูปสินค้า (อัปโหลด)</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-                className="w-full"
-              />
-              <div className="text-xs text-gray-500 mt-1">(หรือวาง URL ด้านล่าง)</div>
-            </div>
-
-            <div className="col-span-2 md:col-span-1">
-              <label className="block text-sm font-medium mb-1">ลิงก์รูป (option)</label>
-              <input
-                className="w-full border rounded px-3 py-2"
-                placeholder="https://..."
-                value={imageURL}
-                onChange={(e) => setImageURL(e.target.value)}
-              />
-            </div>
-
-            <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">คำอธิบาย (option)</label>
-              <textarea
-                rows={4}
-                className="w-full border rounded px-3 py-2"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-
-            {imagePreview && (
-              <div className="col-span-2">
-                <div className="text-sm font-medium mb-1">ภาพตัวอย่าง</div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imagePreview} alt="preview" className="w-48 h-48 object-cover rounded border" />
+            <div className="flex gap-3 mt-3">
+              <div className="flex-1">
+                <label className="block text-sm font-medium">ราคา (บาท)</label>
+                <input
+                  value={price}
+                  onChange={(e) => setPrice(sanitizeNumberInput(e.target.value))}
+                  className="w-full mt-1 border rounded px-3 py-2"
+                  placeholder="0"
+                />
               </div>
-            )}
+
+              <div className="w-40">
+                <label className="block text-sm font-medium">หมวดหมู่</label>
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full mt-1 border rounded px-2 py-2">
+                  <option value="แฟชั่น">แฟชั่น</option>
+                  <option value="รองเท้า">รองเท้า</option>
+                  <option value="เครื่องประดับ">เครื่องประดับ</option>
+                  <option value="อื่นๆ">อื่นๆ</option>
+                </select>
+              </div>
+            </div>
+
+            <label className="block text-sm font-medium mt-4">รูปสินค้า (อัปโหลด หลายรูป)</label>
+            <input ref={fileRef} type="file" accept="image/*" multiple onChange={onFilesPicked} className="mt-1" />
+            <p className="text-xs text-gray-500 mt-1">สูงสุด {MAX_FILES} รูป; รวมไม่เกิน ~{Math.round(MAX_TOTAL_BYTES/1024)} KB</p>
+
+            <label className="block text-sm font-medium mt-4">ลิงก์รูป (เพิ่มแบบ URL)</label>
+            <UrlAdder onAdd={addUrlImage} />
+
+            <label className="block text-sm font-medium mt-4">คำอธิบาย (option)</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={5} className="w-full mt-1 border rounded px-3 py-2" />
           </div>
 
-          {error && <div className="text-sm text-red-600 mt-3">{error}</div>}
-
-          <div className="mt-6 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border rounded text-sm"
-            >
-              ยกเลิก
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-4 py-2 bg-blue-600 text-white rounded text-sm disabled:opacity-60"
-            >
-              {submitting ? "กำลังบันทึก..." : "ลงขายสินค้า"}
-            </button>
+          <div>
+            <label className="block text-sm font-medium">พรีวิวรูป (คลิกปุ่มลบเพื่อเอาออก)</label>
+            <div className="mt-2 grid grid-cols-2 gap-3 max-h-[420px] overflow-auto">
+              {images.length === 0 ? (
+                <div className="col-span-2 text-sm text-gray-500 italic">ยังไม่มีรูป</div>
+              ) : (
+                images.map((src, i) => (
+                  <div key={i} className="relative group border rounded overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt={`img-${i}`} className="w-full h-40 object-cover" />
+                    <div className="absolute top-1 right-1 flex gap-1">
+                      <button type="button" onClick={() => removeImageAt(i)} className="bg-white/90 text-sm px-2 py-0.5 rounded">ลบ</button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        </form>
-      </div>
+        </div>
+
+        <div className="mt-6 flex items-center justify-end gap-3">
+          <button type="button" onClick={onClose} className="px-4 py-2 border rounded">ยกเลิก</button>
+          <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">ลงขายสินค้า</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// helper component for adding url images
+function UrlAdder({ onAdd }: { onAdd: (url: string) => void }) {
+  const [v, setV] = useState("");
+  return (
+    <div className="flex gap-2 mt-1">
+      <input placeholder="https://..." value={v} onChange={(e) => setV(e.target.value)} className="flex-1 border rounded px-2 py-1" />
+      <button type="button" onClick={() => { if (!v) return; onAdd(v); setV(""); }} className="px-3 py-1 border rounded">เพิ่ม</button>
     </div>
   );
 }
