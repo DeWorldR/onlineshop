@@ -63,10 +63,6 @@ export default function Header() {
             <User className="w-5 h-5" />
           </button>
 
-          <button aria-label="Favorites" className="p-1">
-            <Star className="w-5 h-5" />
-          </button>
-
           {/* Link ไปที่ /cart — อย่าใส่จำนวน dynamic ที่ต่างกับ SSR จนกว่าจะ mounted */}
           <Link
             href="/cart"

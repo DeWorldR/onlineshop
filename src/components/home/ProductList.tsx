@@ -3,216 +3,91 @@
 
 import { useState } from "react";
 
-type Product = {
+export type Product = {
   id: string;
   name: string;
   price: number;
+  category: string;
   image?: string;
   description?: string;
   material?: string;
 };
 
-type CartItem = {
-  id: string;
-  name: string;
-  price: number;
-  image?: string | null;
-  qty: number;
-};
-
-const STORAGE_KEY = "cart";
-
-function ProductCard({
-  product,
-  onClick,
-}: {
-  product: Product;
-  onClick: (p: Product) => void;
-}) {
-  return (
-    <div
-      onClick={() => onClick(product)}
-      className="border rounded-lg p-4 shadow hover:shadow-lg cursor-pointer transition-all"
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={product.image}
-        alt={product.name}
-        className="w-full h-48 object-cover rounded"
-      />
-      <h3 className="mt-3 text-lg font-semibold">{product.name}</h3>
-      <p className="text-gray-700">{product.price.toLocaleString()} ฿</p>
-    </div>
-  );
-}
-
 export default function ProductList({
+  products,
+  category,
   onAdd,
 }: {
-  onAdd?: (p: Product) => void;
+  products?: Product[];             // ถ้าส่งมาจากภายนอก
+  category?: string | null;         // หมวดที่ต้องการแสดง (null = all)
+  onAdd?: (p: Product) => void;     // ฟังก์ชันเพิ่มตะกร้า (optional)
 }) {
-  const products: Product[] = [
-    {
-      id: "shirt-black",
-      name: "เสื้อยืด-สีดำ",
-      price: 499,
-      image: "/products/shirt.jpg",
-      description:
-        "เสื้อยืดผ้าฝ้ายเนื้อนุ่ม ระบายอากาศได้ดี เหมาะกับทุกโอกาส",
-      material: "ผ้าฝ้าย 100%",
-    },
-    {
-      id: "polo",
-      name: "เสื้อโปโล",
-      price: 499,
-      image: "/products/เสื้อโปโล.jpg",
-      description: "เสื้อโปโลคอตั้ง ดีไซน์คลาสสิค ใส่ทำงานหรือเที่ยวก็ได้",
-      material: "ผ้า Cotton ผสม Polyester",
-    },
-    {
-      id: "jeans",
-      name: "กางเกงยีนส์",
-      price: 799,
-      image: "/products/jeans.jpg",
-      description: "กางเกงยีนส์ทรงตรง สวมใส่สบาย แมทช์ง่าย",
-      material: "Denim 100%",
-    },
-    {
-      id: "cargo",
-      name: "กางเกงคาร์โก้",
-      price: 699,
-      image: "/products/กางเกงคาร์โก้.jpg",
-      description: "กางเกงคาร์โก้ทรงหลวม มีกระเป๋าข้าง ดีไซน์เท่",
-      material: "ผ้า Twill",
-    },
-    {
-      id: "belt",
-      name: "เข็มขัดหนัง",
-      price: 199,
-      image: "/products/leather belt.jpg",
-      description: "เข็มขัดหนังแท้ หัวโลหะ แข็งแรงทนทาน",
-      material: "หนังแท้",
-    },
-    {
-      id: "ring",
-      name: "แหวนเงิน",
-      price: 199,
-      image: "/products/ring.jpg",
-      description: "แหวนเงินแท้ ดีไซน์มินิมอล สวมใส่ได้ทุกวัน",
-      material: "เงิน 92.5%",
-    },
-    {
-      id: "watch",
-      name: "นาฬิกา",
-      price: 399,
-      image: "/products/watch.webp",
-      description: "นาฬิกาข้อมือสายสแตนเลส กันน้ำได้ในระดับเบื้องต้น",
-      material: "สแตนเลส",
-    },
+  // ถ้า caller ไม่ส่ง products เข้ามา ให้ใช้ default list (fallback)
+  const defaultProducts: Product[] = [
+    { id: "shirt-black", name: "เสื้อยืด-สีดำ", price: 499, category: "เสื้อ", image: "/products/shirt.jpg" },
+    { id: "polo", name: "เสื้อโปโล", price: 499, category: "เสื้อ", image: "/products/เสื้อโปโล.jpg" },
+    { id: "jeans", name: "กางเกงยีนส์", price: 799, category: "กางเกง", image: "/products/jeans.jpg" },
+    { id: "cargo", name: "กางเกงคาร์โก้", price: 699, category: "กางเกง", image: "/products/กางเกงคาร์โก้.jpg" },
+    { id: "belt", name: "เข็มขัดหนัง", price: 199, category: "เครื่องประดับ", image: "/products/leather belt.jpg" },
+    { id: "ring", name: "แหวนเงิน", price: 199, category: "เครื่องประดับ", image: "/products/ring.jpg" },
+    { id: "watch", name: "นาฬิกา", price: 399, category: "เครื่องประดับ", image: "/products/watch.webp" },
   ];
+
+  const list = products ?? defaultProducts;
+
+  // กรองตาม category ถ้ามี
+  const visible = category ? list.filter((p) => p.category === category) : list;
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // ✅ เพิ่มสินค้าใน localStorage (fallback กรณีไม่มี CartContext)
-  function fallbackAddToCart(product: Product) {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY) || "[]";
-      const parsed = JSON.parse(raw);
-      const cart: CartItem[] = Array.isArray(parsed) ? parsed : [];
-
-      const idx = cart.findIndex((it) => it.id === product.id);
-      if (idx >= 0) {
-        cart[idx].qty = (cart[idx].qty || 1) + 1;
-      } else {
-        cart.push({
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          image: product.image ?? null,
-          qty: 1,
-        });
-      }
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
-
-      // ✅ แจ้งส่วนอื่น ๆ ของแอปว่าตะกร้ามีการเปลี่ยน
-      const totalCount = cart.reduce((sum, i) => sum + i.qty, 0);
-      window.dispatchEvent(
-        new CustomEvent("cart-changed", { detail: { count: totalCount } })
-      );
-
-      // ✅ ส่งข้อความ sync ระหว่าง tab (ถ้ามี BroadcastChannel)
-      try {
-        const bc =
-          typeof BroadcastChannel !== "undefined"
-            ? new BroadcastChannel("cart_channel")
-            : null;
-        if (bc) bc.postMessage({ type: "cart-update", cart });
-      } catch {
-        /* ignore */
-      }
-    } catch (err) {
-      console.error("fallbackAddToCart error", err);
-    }
+  if (visible.length === 0) {
+    return <div className="text-center text-gray-500 py-10">ไม่พบสินค้าหมวดนี้</div>;
   }
 
   return (
     <section className="py-6">
       <div className="mx-auto max-w-7xl px-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
-          {products.map((p) => (
-            <ProductCard key={p.id} product={p} onClick={setSelectedProduct} />
+          {visible.map((p) => (
+            <div key={p.id} onClick={() => setSelectedProduct(p)} className="border rounded-lg p-4 shadow hover:shadow-lg cursor-pointer transition-all bg-white">
+              <img src={p.image} alt={p.name} className="w-full h-48 object-cover rounded" />
+              <h3 className="mt-3 text-lg font-semibold">{p.name}</h3>
+              <p className="text-gray-700">{p.price.toLocaleString()} ฿</p>
+            </div>
           ))}
         </div>
       </div>
 
-      {/* ✅ Popup Modal แสดงรายละเอียดสินค้า */}
+      {/* modal details */}
       {selectedProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-8 rounded-lg max-w-3xl w-full relative shadow-xl">
-            {/* ปุ่มปิด */}
-            <button
-              onClick={() => setSelectedProduct(null)}
-              className="absolute top-2 right-2 text-gray-600 hover:text-black text-2xl"
-            >
-              ✕
-            </button>
-
+            <button onClick={() => setSelectedProduct(null)} className="absolute top-2 right-2 text-gray-600 text-2xl">✕</button>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* รูปสินค้า */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={selectedProduct.image}
-                alt={selectedProduct.name}
-                className="w-full h-80 object-cover rounded"
-              />
-
-              {/* รายละเอียดสินค้า */}
+              <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-80 object-cover rounded" />
               <div>
                 <h2 className="text-2xl font-bold">{selectedProduct.name}</h2>
-                <p className="mt-2 text-xl font-semibold text-gray-800">
-                  {selectedProduct.price.toLocaleString()} ฿
-                </p>
-
-                <p className="mt-4 text-gray-700 leading-relaxed">
-                  {selectedProduct.description}
-                </p>
-
-                <p className="mt-2 text-sm text-gray-500">
-                  วัสดุ: {selectedProduct.material}
-                </p>
+                <p className="mt-2 text-xl font-semibold text-gray-800">{selectedProduct.price.toLocaleString()} ฿</p>
+                <p className="mt-4 text-gray-700 leading-relaxed">{selectedProduct.description}</p>
+                <p className="mt-2 text-sm text-gray-500">วัสดุ: {selectedProduct.material}</p>
 
                 <button
                   onClick={() => {
                     try {
-                      if (typeof onAdd === "function") {
-                        onAdd(selectedProduct);
-                      } else {
-                        fallbackAddToCart(selectedProduct);
+                      if (typeof onAdd === "function") onAdd(selectedProduct);
+                      else {
+                        // fallback: เก็บ localStorage แบบง่ายๆ
+                        const raw = localStorage.getItem("cart") || "[]";
+                        const cart = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+                        const idx = cart.findIndex((it: any) => it.id === selectedProduct.id);
+                        if (idx >= 0) cart[idx].qty = (cart[idx].qty || 1) + 1;
+                        else cart.push({ id: selectedProduct.id, name: selectedProduct.name, price: selectedProduct.price, image: selectedProduct.image ?? null, qty: 1 });
+                        localStorage.setItem("cart", JSON.stringify(cart));
+                        const totalCount = cart.reduce((s: number, i: any) => s + (i.qty || 0), 0);
+                        window.dispatchEvent(new CustomEvent("cart-changed", { detail: { count: totalCount } }));
                       }
                     } catch (err) {
-                      console.error("onAdd error", err);
-                      fallbackAddToCart(selectedProduct);
+                      console.error(err);
                     }
                     setSelectedProduct(null);
                   }}
