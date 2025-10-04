@@ -1,51 +1,40 @@
-// src/components/ProductCard.tsx
-"use client";
-
+// src/components/ProductCard.tsx (ตัวอย่างย่อ)
 import React from "react";
-import { ShoppingBag } from "lucide-react";
 
-type Props = {
+export default function ProductCard({
+  id,
+  title,
+  price,
+  image,
+  description,
+  category,
+}: {
   id: string;
   title: string;
-  price?: number | null;
+  price: number;
   image?: string | null;
-  description?: string | null;
-  onView?: (id: string) => void;
-};
-
-export default function ProductCard({ id, title, price, image, description, onView }: Props) {
-  // ป้องกัน undefined
-  const priceNumber = typeof price === "number" && !isNaN(price) ? price : 0;
-
+  description?: string;
+  category?: string;
+}) {
   return (
-    <article className="bg-white rounded shadow-sm overflow-hidden">
-      {image ? (
-        <img src={image} alt={title} className="w-full h-52 object-cover" />
-      ) : (
-        <div className="w-full h-52 bg-gray-100 flex items-center justify-center text-gray-400">
-          No image
-        </div>
-      )}
-
+    <div className="border rounded overflow-hidden shadow-sm bg-white">
+      <div className="h-44 bg-gray-100 flex items-center justify-center overflow-hidden">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt={title} className="w-full h-full object-cover" />
+        ) : (
+          <div className="text-gray-400">No image</div>
+        )}
+      </div>
       <div className="p-4">
-        <h3 className="font-semibold">{title}</h3>
-        {description ? <p className="text-sm text-gray-500 mt-1">{description}</p> : null}
-
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-lg font-bold">
-            {priceNumber.toLocaleString()} ฿
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onView?.(id)}
-              className="inline-flex items-center gap-2 px-3 py-1 border rounded text-sm"
-            >
-              <ShoppingBag className="w-4 h-4" /> ดูรายละเอียด
-            </button>
-          </div>
+        <div className="text-xs text-gray-500 mb-1">{category}</div>
+        <div className="font-medium text-lg">{title}</div>
+        {description && <div className="text-sm text-gray-500 mt-1">{description}</div>}
+        <div className="mt-3 flex items-center justify-between">
+          <div className="font-semibold">{price.toLocaleString()} ฿</div>
+          <button className="text-sm px-3 py-1 border rounded">ดู</button>
         </div>
       </div>
-    </article>
+    </div>
   );
 }
