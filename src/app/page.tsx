@@ -16,9 +16,13 @@ export default function Home() {
         title="คอลเลคชันฤดูใบไม้ร่วง–ฤดูหนาว 2025/26"
         buttonText="เพิ่มเติม"
       />
-
-      {/* Footer */}
-      <Footer />
+      <Section
+        image="https://s.isanook.com/me/0/ud/13/69685/uniqlo.jpg?ip/crop/w670h402/q80/jpg"
+        category="แฟชั่น"
+        title="คอลเลคชันฤดูใบไม้ร่วง–ฤดูหนาว 2025/26"
+        buttonText="เพิ่มเติม"
+      />
+      
     </div>
   )
 }
