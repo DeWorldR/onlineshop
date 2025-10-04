@@ -1,4 +1,4 @@
-// src/components/Section.tsx
+// Very Compact: ขนาดหัวข้อเล็กลงมาก เหมาะถ้ารู้สึกว่าเดิมยังใหญ่เกิน
 interface SectionProps {
   image: string
   category: string
@@ -9,16 +9,30 @@ interface SectionProps {
 export default function Section({ image, category, title, buttonText }: SectionProps) {
   return (
     <section
-      className="relative h-[500px] bg-cover bg-center"
+      aria-label={title}
+      className="relative min-h-[50vh] md:min-h-[60vh] lg:min-h-[65vh] bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${image})` }}
     >
-      <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white text-center px-4">
-        <h2 className="text-lg font-medium">{category}</h2>
-        <h3 className="text-2xl font-bold mt-2">{title}</h3>
-        <button className="mt-4 px-6 py-2 bg-white text-black font-medium">
-          {buttonText}
-        </button>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/30 to-transparent" />
+
+      <div className="absolute left-1/2 bottom-16 md:bottom-18 transform -translate-x-1/2 z-10 px-6 w-full">
+        <div className="mx-auto max-w-lg md:max-w-xl text-center">
+          <p className="text-xs uppercase tracking-widest text-gray-200">{category}</p>
+
+          {/* Very compact sizes */}
+          <h2 className="mt-2 font-bold text-white drop-shadow-md tracking-tight leading-snug text-xl md:text-2xl lg:text-3xl">
+            <span className="block break-words whitespace-normal">{title}</span>
+          </h2>
+
+          <div className="mt-5">
+            <button className="inline-block bg-white text-black font-semibold px-5 py-2 rounded shadow hover:shadow-lg transition text-sm">
+              {buttonText}
+            </button>
+          </div>
+        </div>
       </div>
+
+      <span className="sr-only">{title}</span>
     </section>
   )
 }

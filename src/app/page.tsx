@@ -11,10 +11,10 @@ export default function Home() {
       <Navbar />
 
       <Section
-        image="https://images.ctfassets.net/hrltx12pl8hq/28ECAQiPJZ78hxatLTa7Ts/2f695d869736ae3b0de3e56ceaca3958/free-nature-images.jpg?fit=fill&w=1200&h=630"
+        image="https://s.isanook.com/me/0/ud/13/69685/uniqlo.jpg?ip/crop/w670h402/q80/jpg"
         category="แฟชั่น"
         title="คอลเลคชันฤดูใบไม้ร่วง–ฤดูหนาว 2025/26"
-        buttonText="ดูรายละเอียดเพิ่มเติม"
+        buttonText="เพิ่มเติม"
       />
 
       {/* Footer */}
