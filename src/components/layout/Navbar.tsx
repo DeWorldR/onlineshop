@@ -77,13 +77,13 @@ export default function Navbar() {
         aria-hidden={!showNav}
       >
         <button onClick={() => setOpen((s) => !s)} className="px-3">
-          เสื้อ
+          แฟชั่น
         </button>
         <Link href="#" className="px-3">
-          กางเกง
+          เสื้อ
         </Link>
         <Link href="#" className="px-3">
-          เข็มขัด
+          กางเกง
         </Link>
         <Link href="#" className="px-3">
           แหวน
