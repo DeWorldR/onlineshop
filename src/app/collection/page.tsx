@@ -1,3 +1,4 @@
+// src/app/collection/page.tsx
 "use client";
 
 import { useSearchParams } from "next/navigation";
@@ -5,18 +6,8 @@ import ProductList from "@/components/home/ProductList";
 import { useCart } from "@/components/cart/CartProvider";
 
 export default function CollectionPage() {
-  const params = useSearchParams();
-  const category = params?.get("category") ?? null;
-  const collection = params?.get("collection") ?? null; // e.g. "autumn2025"
-
-  // map collection-slug -> product ids (ตัวอย่าง)
-  let collectionIds: string[] | null = null;
-  if (collection === "autumn2025") {
-    // ตัวอย่าง: เซ็ต = 1 เสื้อ + 1 กางเกง + 1 เครื่องประดับ
-    collectionIds = ["shirt-black", "jeans", "ring"];
-  } else if (collection === "summer2025") {
-    collectionIds = ["polo", "cargo", "belt"];
-  }
+  const search = useSearchParams();
+  const categoryParam = search?.get("cat") ?? null;
 
   const { add } = useCart();
 
@@ -30,9 +21,15 @@ export default function CollectionPage() {
     });
   }
 
+  // ถ้าต้องการให้ 'ทั้งหมด' ใช้ null หรือ empty string เป็นค่า default
+  const onlyCategory = categoryParam && categoryParam !== "" ? categoryParam : null;
+
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10">
-      <ProductList category={category} collectionIds={collectionIds} onAdd={handleAdd} />
+    <div className="min-h-screen bg-white">
+      <main className="max-w-6xl mx-auto px-6 py-10">
+        <h1 className="text-2xl font-semibold mb-6">{onlyCategory ? `หมวด: ${onlyCategory}` : "สินค้าทั้งหมด"}</h1>
+        <ProductList onAdd={handleAdd} onlyCategory={onlyCategory} />
+      </main>
     </div>
   );
 }

@@ -17,10 +17,10 @@ export default function Home() {
         buttonText="เพิ่มเติม"
       />
       <Section
-        image="https://s.isanook.com/me/0/ud/13/69685/uniqlo.jpg?ip/crop/w670h402/q80/jpg"
-        category="แฟชั่น"
-        title="คอลเลคชันฤดูใบไม้ร่วง–ฤดูหนาว 2025/26"
-        buttonText="เพิ่มเติม"
+        image="https://cdn.pixabay.com/photo/2014/06/16/23/39/black-370118_640.png"
+        category="-"
+        title="หมด"
+        buttonText="-"
       />
       
     </div>
