@@ -1,46 +1,58 @@
-"use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+"use client"
 
-export default function SignInPage() {
-  const router = useRouter();
-  const [form, setForm] = useState({ email: "", password: "" });
+import { signIn } from "next-auth/react"
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 
-  const handleChange = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+export default function LoginPage() {
+  const router = useRouter()
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const found = users.find(
-      (u) => u.email === form.email && u.password === form.password
-    );
-    if (found) {
-      localStorage.setItem("currentUser", JSON.stringify(found));
-      router.push("/dashboard");
+  const handleLogin = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    const result = await signIn("credentials", {
+      username,
+      password,
+      redirect: false,
+    })
+    setLoading(false)
+
+    if (result?.error) {
+      alert("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง ❌")
     } else {
-      alert("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+      router.push("/profile")
     }
-  };
+  }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-100 to-white">
-      <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center text-blue-700 mb-6">
-          เข้าสู่ระบบ
-        </h2>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 to-white">
+      <div className="bg-white shadow-2xl rounded-2xl p-10 w-full max-w-md transform transition-all hover:scale-[1.02]">
+        {/* โลโก้ */}
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-3">
+            <div className="w-16 h-16 bg-blue-500 text-white rounded-full flex items-center justify-center text-3xl font-bold shadow-md">
+              💼
+            </div>
+          </div>
+          <h2 className="text-3xl font-bold text-blue-700 mb-2">เข้าสู่ระบบ</h2>
+          <p className="text-gray-500 text-sm">เข้าสู่บัญชีผู้ซื้อหรือผู้ขายของคุณ</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              อีเมล
+              ชื่อผู้ใช้หรืออีเมล
             </label>
             <input
-              type="email"
-              name="email"
-              onChange={handleChange}
+              type="text"
+              placeholder="เช่น seller123"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
               required
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400"
             />
           </div>
 
@@ -50,28 +62,38 @@ export default function SignInPage() {
             </label>
             <input
               type="password"
-              name="password"
-              onChange={handleChange}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
               required
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-all"
+            disabled={loading}
+            className={`w-full py-2 rounded-lg text-white font-medium transition-all ${
+              loading
+                ? "bg-blue-400 cursor-not-allowed"
+                : "bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 shadow-md"
+            }`}
           >
-            เข้าสู่ระบบ
+            {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
           </button>
         </form>
 
+        {/* ลิงก์สมัครสมาชิก */}
         <p className="text-center text-gray-600 text-sm mt-6">
           ยังไม่มีบัญชี?{" "}
-          <a href="/signup" className="text-blue-600 hover:underline">
+          <a
+            href="/signup"
+            className="text-blue-600 hover:underline font-medium"
+          >
             สมัครสมาชิก
           </a>
         </p>
       </div>
     </div>
-  );
+  )
 }
