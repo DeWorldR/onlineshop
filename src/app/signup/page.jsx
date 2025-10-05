@@ -1,27 +1,39 @@
 "use client";
-import { useState } from "react";
+
+import { useState, ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+
+/**
+ * @typedef {Object} User
+ * @property {string} name
+ * @property {string} email
+ * @property {string} password
+ * @property {"buyer" | "seller"} role
+ */
 
 export default function SignUpPage() {
   const router = useRouter();
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<User>({
     name: "",
     email: "",
     password: "",
     role: "buyer",
   });
 
-  const handleChange = (e) =>
+  const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const users = JSON.parse(localStorage.getItem("users") || "[]");
+
     const exist = users.find((u) => u.email === form.email);
     if (exist) {
       alert("อีเมลนี้มีผู้ใช้งานแล้ว!");
       return;
     }
+
     users.push(form);
     localStorage.setItem("users", JSON.stringify(users));
     alert("สมัครสมาชิกสำเร็จ! โปรดเข้าสู่ระบบ");
@@ -30,8 +42,8 @@ export default function SignUpPage() {
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-blue-100 to-white">
-      <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center text-blue-700 mb-6">
+      <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md border border-blue-100">
+        <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">
           สมัครสมาชิกใหม่
         </h2>
 
@@ -45,7 +57,7 @@ export default function SignUpPage() {
               name="name"
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
             />
           </div>
 
@@ -58,7 +70,7 @@ export default function SignUpPage() {
               name="email"
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
             />
           </div>
 
@@ -71,7 +83,7 @@ export default function SignUpPage() {
               name="password"
               onChange={handleChange}
               required
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
             />
           </div>
 
@@ -82,7 +94,7 @@ export default function SignUpPage() {
             <select
               name="role"
               onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"
             >
               <option value="buyer">ผู้ซื้อ</option>
               <option value="seller">ผู้ขาย</option>
